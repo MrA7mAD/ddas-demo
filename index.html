@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تجربة بوت DDAS التعليمي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-column chat column, sticky header with unit progress, sticky composer at bottom */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#1b2422; --muted:#5f6b68; --line:#dfe5e3;
+  --accent:#17695f; --accent-soft:#e2f0ed; --user:#17695f; --user-ink:#ffffff;
+  --ok:#2f7d3b; --ok-soft:#e6f3e7; --bad:#a3452f; --bad-soft:#f8e9e5;
+  --display:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121816; --surface:#1b2321; --ink:#e7eeeb; --muted:#9aa8a4; --line:#2b3633;
+    --accent:#5cc2b2; --accent-soft:#1d3531; --user:#2f8f82; --user-ink:#ffffff;
+    --ok:#7ccc87; --ok-soft:#1f3322; --bad:#ef9a85; --bad-soft:#3a2420; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121816; --surface:#1b2321; --ink:#e7eeeb; --muted:#9aa8a4; --line:#2b3633;
+  --accent:#5cc2b2; --accent-soft:#1d3531; --user:#2f8f82; --user-ink:#ffffff;
+  --ok:#7ccc87; --ok-soft:#1f3322; --bad:#ef9a85; --bad-soft:#3a2420; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.75;font-size:16px;display:flex;flex-direction:column}
+header{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:720px;margin:0 auto}
+header h1{font-family:var(--display);font-size:1rem;margin:0;text-wrap:balance}
+.steps{display:flex;gap:4px;max-width:720px;margin:8px auto 0}
+.steps span{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.steps span.done{background:var(--accent)}
+.steps span.now{background:var(--accent);opacity:.45}
+.timer{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+main{flex:1;overflow-y:auto;padding:16px}
+.chat{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-bottom:12px}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
+.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-start-start-radius:4px}
+.me{align-self:flex-end;background:var(--user);color:var(--user-ink);border-start-end-radius:4px}
+.unit{align-self:stretch;max-width:none;text-align:center;font-family:var(--display);font-size:.85rem;color:var(--accent);background:transparent;padding:6px 0 0}
+.q{border-inline-start:4px solid var(--accent)}
+.ok{background:var(--ok-soft);border-color:transparent}
+.bad{background:var(--bad-soft);border-color:transparent}
+.note{align-self:center;font-size:.8rem;color:var(--muted);background:transparent;padding:0}
+.opts{display:flex;flex-direction:column;gap:8px;align-self:stretch}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:10px 14px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);text-align:start}
+button.primary{background:var(--accent);color:var(--surface);border-color:var(--accent);text-align:center;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.composer{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px}
+.crow{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;font:inherit;resize:none;min-height:44px;max-height:140px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--ink)}
+.crow button{flex-shrink:0}
+.hidden{display:none !important}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.stats div{background:var(--accent-soft);border-radius:10px;padding:8px 10px;font-size:.85rem}
+.stats b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.intro{max-width:720px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.intro h2{font-family:var(--display);font-size:1.25rem;margin:0 0 6px;text-wrap:balance}
+.intro p{margin:6px 0;color:var(--muted)}
+.intro ol{margin:8px 0;padding-inline-start:22px}
+.intro label{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:.9rem}
+@media (prefers-reduced-motion: no-preference){ .msg{animation:in .2s ease-out} @keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}} }
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <h1>جلسة توعية: طب الأسنان الدفاعي</h1>
+    <span class="timer" id="timer">00:00</span>
+  </div>
+  <div class="steps" id="steps"></div>
+</header>
+<main id="scroller">
+  <section class="intro" id="intro">
+    <h2>نسخة تجريبية للبوت التعليمي</h2>
+    <p>هذه النسخة للتجربة الداخلية قبل الدراسة. الجلسة ست وحدات، تقريباً 18 دقيقة. في هذا العرض تظهر الإجابة النموذجية بعد كل سؤال فهم، وفي النسخة النهائية يعلّق الذكاء الاصطناعي على إجابتك.</p>
+    <ol>
+      <li>المفهوم والأنواع والأسباب</li>
+      <li>المسؤولية المهنية والقانونية</li>
+      <li>المضاعفات مقابل الأخطاء</li>
+      <li>الحماية المشروعة والتعامل مع الشكاوى</li>
+      <li>اتخاذ القرار المبني على الأدلة</li>
+      <li>سيناريوهات سريرية</li>
+    </ol>
+    <p>بعد كل وحدة سؤال فهم قصير. في آخر الجلسة تقدر تسأل أي سؤال عن الموضوع.</p>
+    <label for="n6"><input type="checkbox" id="n6"> عرض السيناريوهات الستة (بدل ٣)</label>
+    <button class="primary" id="start">ابدأ الجلسة</button>
+  </section>
+  <div class="chat" id="chat"></div>
+</main>
+<div class="composer hidden" id="composer">
+  <div class="crow">
+    <textarea id="input" rows="1" placeholder="اكتب إجابتك هنا"></textarea>
+    <button class="primary" id="send">إرسال</button>
+  </div>
+</div>
+
+<script>
+/* ---------- المحتوى (من مستند المحتوى التعليمي) ---------- */
+const UNITS = [
+ {title:"الوحدة ١: المفهوم والأنواع والأسباب", msgs:[
+  "طب الأسنان الدفاعي هو أي قرار أو إجراء يتخذه الطبيب **أساساً لحماية نفسه** من الشكاوى أو المساءلة، لا لمصلحة المريض العلاجية.\n\nالمهم هو **الدافع**: نفس الإجراء ممكن يكون مبرراً في حالة، ودفاعياً في حالة ثانية.",
+  "له نوعان:\n\n**١. السلبي (تجنّب):** الابتعاد عن إجراءات أو مرضى يُرى أنهم عالو الخطورة. مثل: رفض خلع ضرس عقل ضمن قدرتك، تحويل علاج عصب بسيط، تجنّب مريض سبق واشتكى.\n\n**٢. الإيجابي (زيادة):** إضافة فحوصات أو إجراءات لا تغيّر القرار العلاجي. مثل: CBCT بدون مؤشر، أشعة روتينية لكل مريض، مضاد حيوي بدون داعٍ.",
+  "**ليش يمارسه الأطباء؟**\n• الخوف من الشكوى أو المساءلة\n• ضعف المعرفة النظامية، فيبالغ الطبيب في الحذر\n• تجربة سابقة أو قصص متداولة بين الأطباء\n• قلة الخبرة أو الثقة، خصوصاً بداية الممارسة\n• توقعات المرضى ووسائل التواصل\n• بيئة العمل وضغط الوقت",
+  "**ليش يضرّ؟** المريض يتأخر علاجه أو يتعرض لإشعاع وتكلفة بدون فائدة، والطبيب يفقد مهاراته ويزيد قلقه بدل ما يقل.\n\n**القاعدة:** إذا الإجراء يغيّر التشخيص أو العلاج أو يحمي المريض، فهو مبرر. إذا هدفه الوحيد حماية الطبيب، فهو دفاعي. والتوثيق الجيد مو دفاعي، هو جزء من الممارسة السليمة."
+ ], q:"طلبت أشعة بانوراما لمريض جاء لتنظيف روتيني، ما عنده أعراض وآخر أشعة له قبل شهرين، عشان \"تكون مغطّى\". هل هذا دفاعي؟ وليش؟",
+  model:"نعم، دفاعي إيجابي: الأشعة ما تغيّر القرار العلاجي، والدافع حماية الطبيب لا حاجة المريض."},
+ {title:"الوحدة ٢: المسؤولية المهنية والقانونية", msgs:[
+  "التفاصيل تختلف بين الدول، بس أغلب الأنظمة تشترك في مبادئ أساسية:\n\n• **أركان المسؤولية ثلاثة:** خطأ + ضرر + علاقة سببية بينهم. النتيجة السيئة لحالها ما تكفي.\n• **التزام ببذل العناية لا بتحقيق نتيجة:** السؤال \"هل قصّر الطبيب؟\" مو \"هل نجح العلاج؟\"\n• **المعيار هو الأصول المهنية المتعارف عليها:** ما يسويه طبيب من نفس المستوى في نفس الظروف.\n• **الخطأ يُقيّم برأي خبراء أطباء**، مو برأي المريض.",
+  "• **المسؤولية أنواع:** مهنية وتأديبية، ومدنية (تعويض)، ونادراً جزائية.\n• **الأخلاقيات المهنية ملزمة**، مو إرشاد اختياري.\n• **طبيب الامتياز** يعمل تحت إشراف، والعمل ضمن صلاحياته والرجوع لمشرفه جزء من التزامه المهني.",
+  "**مثال من السعودية:** المرجع هو نظام مزاولة المهن الصحية ولائحته التنفيذية، ودليل أخلاقيات الممارس الصحي من الهيئة السعودية للتخصصات الصحية، ووثيقة حقوق المرضى، والدليل السعودي للإذن الطبي من وزارة الصحة.\n\nوتنص المادة 27 من النظام على أن الخطأ المهني اللي يترتب عليه ضرر للمريض يُلزم مرتكبه بالتعويض، ومن أمثلته الخطأ في العلاج أو نقص المتابعة.\n\nإذا كنت تعمل في دولة ثانية، ارجع لأنظمة بلدك والجهة المنظمة للمهنة عندك."
+ ], q:"مريض صار عنده ألم بعد حشوة عميقة، والعمل تم حسب الأصول. هل الطبيب مسؤول؟",
+  model:"لا، ما فيه خطأ مهني لأن العمل حسب الأصول. لكن لازم يتابع الحالة، لأن نقص المتابعة نفسه خطأ."},
+ {title:"الوحدة ٣: المضاعفات مقابل الأخطاء", msgs:[
+  "أهم فكرة لتقليل الخوف: **المضاعفة المعروفة**، لما تحدث رغم الالتزام بالأصول ومع موافقة مستنيرة سليمة، **ما تُعتبر خطأً مهنياً بحد ذاتها**.",
+  "قارن في كل مرحلة:\n\n• **التشخيص والخطة:** مضاعفة = مبنية على فحص ومؤشر | خطأ = ناقصة أو غير مبررة\n• **الموافقة:** مضاعفة = المريض أُبلغ ووافق | خطأ = ما فيه موافقة أو ما ذُكرت المخاطر\n• **التنفيذ:** مضاعفة = حسب الأصول وضمن القدرة | خطأ = إهمال، أو عمل فوق القدرة بدون إشراف\n• **بعد الحدث:** مضاعفة = إبلاغ ومتابعة أو تحويل | خطأ = إخفاء أو نقص متابعة\n• **التوثيق:** مضاعفة = كل خطوة مسجّلة | خطأ = غير موجود أو معدّل بأثر رجعي",
+  "**أمثلة مضاعفات معروفة:** خدر بعد خلع ضرس العقل، كسر أداة في القناة، التهاب السنخ (dry socket)، ألم بعد الحشوة، نزف بعد الخلع.\n\n**القاعدة:** السؤال مو \"هل صارت مشكلة؟\" بل \"هل التزمت بالأصول في كل مرحلة؟\". والمضاعفة ممكن تتحول لخطأ إذا أُخفيت أو أُهملت متابعتها."
+ ], q:"مريض صار عنده dry socket بعد خلع تم حسب الأصول، والطبيب رفض يشوفه لما رجع. وين الخطأ؟",
+  model:"المضاعفة نفسها مو خطأ. الخطأ هو رفض المتابعة."},
+ {title:"الوحدة ٤: الحماية المشروعة والتعامل مع الشكاوى", msgs:[
+  "أربع ممارسات تحميك وتحمي المريض معاً:\n\n**١. الموافقة المستنيرة:** التشخيص، والإجراء، والمخاطر الشائعة والخطيرة، والبدائل، ونتيجة عدم العلاج. حوار بلغة يفهمها المريض، مو مجرد توقيع. وللإجراءات الجراحية موافقة مكتوبة.\n\n**٢. التوثيق:** الشكوى، والفحص، والتشخيص، وسبب اختيار الخطة، وما قيل للمريض، وأي حدث غير متوقع. يُكتب في نفس اليوم، وأي إضافة لاحقة تُكتب بتاريخها.",
+  "**٣. التواصل والإفصاح:** كثير من الشكاوى تبدأ من سوء تواصل أو توقعات غير متفق عليها. بعد أي مضاعفة: أبلغ المريض بوضوح وصدق، ووضّح الخطة.\n\n**٤. العمل ضمن القدرة والتحويل المبرر:** حوّل لما تكون الحالة فعلاً خارج قدرتك أو اختصاصك. التحويل عشان تتجنب المسؤولية فقط، لحالة ضمن قدرتك، دفاعي سلبي.",
+  "**لما تجيك شكوى:**\n١. اسمع للمريض بهدوء، ولا تدخل في جدال\n٢. راجع الملف وما هو موثّق\n٣. وضّح ما حدث والخيارات المتاحة\n٤. بلّغ مشرفك أو إدارة المنشأة\n٥. لا تعدّل السجلات بأثر رجعي، ولا تضغط على المريض يتنازل\n\nالشكوى حق للمريض، ومو حكم على الطبيب. والقرار يُبنى على رأي خبراء أطباء."
+ ], q:"المريض اشتكى من ألم بعد علاج، والطبيب رجع أضاف للملف أنه \"شرح المخاطر\" بتاريخ يوم العلاج. ما المشكلة؟",
+  model:"تعديل السجل بأثر رجعي مخالفة أخطر من الشكوى نفسها. الإضافة اللاحقة تُكتب بتاريخها الحقيقي."},
+ {title:"الوحدة ٥: اتخاذ القرار المبني على الأدلة", msgs:[
+  "القرار المبني على دليل وموثّق هو أقوى حماية للطبيب. قبل أي فحص أو علاج أو تحويل، اسأل نفسك:\n\n١. هل فيه **مؤشر سريري** من الفحص والأعراض وعوامل الخطورة؟\n٢. هل النتيجة **بتغيّر التشخيص أو الخطة**؟ إذا لا، فالفحص غالباً دفاعي.\n٣. وش تقول **الإرشادات**؟ ووثّق سبب قرارك.",
+  "**مثال: الأشعة** حسب إرشادات جمعية طب الأسنان الأمريكية (ADA):\n• ما فيه فترة واحدة تناسب الجميع؛ التوقيت حسب صحة الفم والعمر والخطورة والأعراض\n• الفحص السريري أولاً، ثم تحديد هل الصور محتاجة\n• مبدأ ALARA: تعرّض مبرر وأقل ما يمكن بشكل معقول\n• CBCT فقط لما الخيارات الأقل إشعاعاً ما تعطي المعلومة المطلوبة، ومع فائدة سريرية واضحة\n• الـ CBCT أكبر مصدر منفرد للإشعاع التشخيصي في طب الأسنان",
+  "**نفس المنطق ينطبق على غيرها:**\n• **المضاد الحيوي:** مبرر عند وجود مؤشر (انتشار الالتهاب، أعراض عامة)، ودفاعي بعد كل خلع \"عشان ما يشتكي المريض\"\n• **التحويل:** مبرر لحالة خارج القدرة، ودفاعي لحالة بسيطة ضمنها\n• **الاستشارة:** مبررة لسؤال سريري حقيقي، ودفاعية لكل حالة \"عشان يكون فيه أحد معي\""
+ ], q:"مريض بالغ بدون أعراض، نشاط التسوس عنده قليل، وآخر bitewing قبل ستة أشهر. هل تطلب bitewing جديدة؟",
+  model:"غالباً لا: الخطورة قليلة وما فيه مؤشر يغيّر القرار. الفترة تحددها الخطورة."}
+];
+
+const CASES = [
+ {id:"CS01", title:"خدر الشفة بعد خلع ضرس العقل",
+  text:"مريض عمره 28 سنة، ضرس عقل سفلي مطمور. البانوراما أظهرت علامات قرب من القناة السنية السفلية، فطُلب CBCT. الموافقة ذكرت خطر الخدر، والخلع تم حسب الأصول. في اليوم الثاني يتصل المريض ويشتكي من خدر في الشفة السفلية.",
+  q:"وش تسوي الحين؟",
+  opts:["تطمّنه أن الخدر بيروح لحاله، وما ترتب متابعة","تشوفه بدري، وتوثّق منطقة الخدر واختبار الحس، وتشرح له بصدق، وترتب متابعة، وتحوّل لجراح فم حسب البروتوكول","تقول له إن الخدر غير مرتبط بالخلع"],
+  ans:1,
+  exp:"إصابة العصب مضاعفة معروفة رغم التقييم والموافقة السليمة، ومو خطأ بحد ذاتها. الخطأ يبدأ لما تُهمل المتابعة (أ) أو يُنكر الحدث (ج). التوثيق والمتابعة يحمون المريض والطبيب."},
+ {id:"CS02", title:"كسر أداة أثناء علاج الجذور",
+  text:"أثناء علاج عصب ضرس سفلي أول، انكسر file في الثلث الأخير من القناة المزية الأنسية. المريض ما لاحظ شي.",
+  q:"وش تسوي؟",
+  opts:["تأخذ أشعة، وتبلغ المريض، وتوثّق، وتحاول التجاوز أو الإزالة إذا ضمن قدرتك، أو تحوّل لأخصائي علاج عصب","تكمل العلاج وما تخبر المريض عشان ما يقلق","تنصحه بخلع الضرس عشان تتجنب أي مشكلة لاحقة"],
+  ans:0,
+  exp:"كسر الأداة مضاعفة معروفة في علاج العصب. الإخفاء (ب) هو اللي يحوّلها لمشكلة أخلاقية ومهنية، لأن من حق المريض يعرف حالته. والخلع بدون مؤشر علاجي (ج) قرار دفاعي ضد مصلحة المريض."},
+ {id:"CS03", title:"مريض سبق أن قدم شكوى",
+  text:"مريض يحتاج حشوة بسيطة (class I) في ضرس. يذكر أثناء الكلام أنه رفع شكوى على طبيب سابق لأنه ما كان راضي عن النتيجة.",
+  q:"وش تسوي؟",
+  opts:["تعتذر عن علاجه وتحوّله لزميل","تطلب منه يوقّع إقراراً بأنه ما يشتكي مستقبلاً","تعالجه مثل أي مريض: تشرح العلاج والتوقعات بوضوح، وتأخذ موافقته، وتوثّق"],
+  ans:2,
+  exp:"رفض المريض بسبب شكواه السابقة (أ) دفاعي سلبي. وإقرار التنازل المسبق (ب) مو مناسب مهنياً، وغالباً ما يلغي المسؤولية، لأن الشكوى حق للمريض. الحماية الحقيقية: تواصل واضح، وموافقة، وتوثيق."},
+ {id:"CS04", title:"طلب CBCT دون مبرر",
+  text:"مريض عمره 35 سنة، يحتاج خلع ضاحك سفلي متهدّم مكتمل البزوغ. الأشعة الذروية (periapical) تظهر جذراً مستقيماً وما فيه علامات خطورة. الطبيب يفكر يطلب CBCT \"عشان يكون مغطّى\".",
+  q:"هل يطلب CBCT؟",
+  opts:["نعم، لأن الـ CBCT يحمي الطبيب لو صارت مشكلة","لا، لأن المريض ما يحتاج أي أشعة قبل الخلع","لا، الأشعة الذروية كافية، ويوثّق أنها أظهرت تشريحاً طبيعياً بدون علامات خطورة"],
+  ans:2,
+  exp:"الـ CBCT يُطلب فقط لما الخيارات الأقل إشعاعاً ما تعطي المعلومة المطلوبة، وهنا المعلومة موجودة. طلبه \"للتغطية\" (أ) دفاعي إيجابي يعرّض المريض لإشعاع بدون فائدة. والخلع بدون أشعة إطلاقاً (ب) نقص في التقييم."},
+ {id:"CS05", title:"تحويل علاج جذور بسيط",
+  text:"طبيب أسنان عام يسوي علاجات عصب بانتظام. مريضة عمرها 40 سنة تحتاج علاج عصب لقاطع علوي أوسط: قناة واحدة، مستقيمة، وما فيه تكلّس. يفكر يحوّلها لأخصائي لأن \"الأخصائي أضمن لو صار شي\".",
+  q:"وش القرار الأنسب؟",
+  opts:["يعالجها بنفسه مع موافقة مستنيرة وتوثيق، لأن الحالة سهلة وضمن قدرته","يحوّلها لأن الأخصائي أضمن لو صارت مضاعفة","يقترح خلع السن وزراعة بدل العلاج"],
+  ans:0,
+  exp:"قرار التحويل يعتمد على صعوبة الحالة وقدرة الطبيب، مو على الخوف. التحويل هنا (ب) دفاعي سلبي يأخر العلاج ويزيد تكلفته، والخلع (ج) ضد مصلحة المريضة. لو كانت الحالة معقدة (قنوات متكلسة أو منحنية بشدة) كان التحويل مبرراً."},
+ {id:"CS06", title:"التهديد بتقديم شكوى",
+  text:"مريضة رُكّب لها تاج زيركونيا على قاطع أمامي. التاج مضبوط فنياً، بس بعد أسبوع رجعت منزعجة تقول إن اللون أفتح من أسنانها، وتهدّد بشكوى.",
+  q:"وش تسوي؟",
+  opts:["تقول لها إن الشغل سليم وهذا رأيها، وما تناقش","تعيد التاج فوراً بدون تقييم، عشان تتجنب الشكوى بأي ثمن","تسمع لها، وتراجع الملف (هل اللون اختير معها ووافقت عليه قبل التركيب؟)، وتشرح بهدوء، وتعرض الحلول الممكنة حسب سياسة العيادة"],
+  ans:2,
+  exp:"كثير من الشكاوى تجي من توقعات غير متفق عليها، مو من خطأ فني. التجاهل (أ) يصعّد المشكلة، والإعادة بدون تقييم (ب) رد فعل من الخوف. الوقاية تبدأ قبل التركيب: اختيار اللون مع المريضة في إضاءة مناسبة، وموافقتها الموثّقة على التركيبة التجريبية."}
+];
+
+const SUMMARY = "**ملخص الجلسة في ٥ نقاط:**\n١. **الدافع** هو اللي يحدد إذا الإجراء دفاعي أو مبرر.\n٢. المسؤولية تحتاج **خطأ + ضرر + علاقة سببية**، والالتزام ببذل العناية لا بتحقيق نتيجة.\n٣. **المضاعفة مو خطأ**؛ الإخفاء وإهمال المتابعة هم الخطأ.\n٤. الحماية الحقيقية: **موافقة مستنيرة، وتوثيق، وتواصل، وعمل ضمن القدرة**.\n٥. القرار المبني على **مؤشر سريري وإرشادات** وموثّق هو أقوى حماية.";
+
+const LETTERS = ["أ","ب","ج"];
+
+/* ---------- تعليمات Claude ---------- */
+function contentDump(){
+  let s = "";
+  UNITS.forEach(u=>{ s += "## "+u.title+"\n"+u.msgs.join("\n\n")+"\n\n"; });
+  s += "## الوحدة ٦: السيناريوهات\n";
+  CASES.forEach(c=>{ s += c.id+" "+c.title+": "+c.text+" الإجابة الأنسب: "+c.opts[c.ans]+". التفسير: "+c.exp+"\n"; });
+  return s + "\n" + SUMMARY;
+}
+const RULES = `أنت بوت تعليمي في دراسة بحثية عن طب الأسنان الدفاعي، موجّه لأطباء الأسنان وأطباء الامتياز الناطقين بالعربية.
+القواعد:
+- أجب فقط من المحتوى المعتمد أدناه. لا تخترع أرقام مواد أو أنظمة أو إحصائيات.
+- إذا كان السؤال خارج المحتوى قل: "هذا خارج نطاق الجلسة، ارجع لمختص قانوني أو للجهة المنظمة للمهنة في بلدك."
+- لا تعطِ استشارة قانونية شخصية لحالة حقيقية.
+- لا تطلب أسماء أو بيانات مرضى أو معلومات تعريفية.
+- لا تذكر الاستبيان أو مقياس DDAS أو بنوده إطلاقاً.
+- النظام السعودي مثال فقط؛ إذا سُئلت عن دولة أخرى وجّه المشارك لأنظمة بلده.
+- اكتب بعربية واضحة قريبة من لهجة المحادثة، مع المصطلحات الإنجليزية الشائعة بين الأطباء. كن مختصراً.`;
+
+/* ---------- الحالة ---------- */
+const chat = document.getElementById("chat");
+const scroller = document.getElementById("scroller");
+const composer = document.getElementById("composer");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+const stepsEl = document.getElementById("steps");
+let sample = null, sampleTried = false;
+let t0 = 0, timerId = 0, msgCount = 0, score = 0, casesShown = [], unitsDone = 0;
+let mode = "idle"; // idle | answer | qa
+let pendingAnswer = null;
+let qaHistory = [];
+
+(async()=>{ try{ sample = await window.claude.use("sample"); }catch(e){ sample = null; } sampleTried = true; })();
+
+function esc(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function fmt(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>"); }
+function scrollDown(){ requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; }); }
+function add(cls, text, html){
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if(html) d.innerHTML = html; else d.innerHTML = fmt(text);
+  chat.appendChild(d); scrollDown(); return d;
+}
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+function setSteps(cur){
+  stepsEl.innerHTML = "";
+  for(let i=0;i<7;i++){ const s=document.createElement("span"); if(i<cur) s.className="done"; else if(i===cur) s.className="now"; stepsEl.appendChild(s); }
+}
+function tick(){ const s = Math.floor((Date.now()-t0)/1000); document.getElementById("timer").textContent = String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+function askInput(placeholder){ composer.classList.remove("hidden"); input.placeholder = placeholder; input.value=""; input.focus({preventScroll:true}); }
+function hideInput(){ composer.classList.add("hidden"); }
+function nextButton(label, fn){
+  const wrap = document.createElement("div"); wrap.className="opts";
+  const b = document.createElement("button"); b.className="primary"; b.textContent=label;
+  b.onclick = ()=>{ wrap.remove(); fn(); };
+  wrap.appendChild(b); chat.appendChild(wrap); scrollDown();
+}
+
+async function callClaude(prompt, bubble, tier){
+  if(!sampleTried){ await wait(1500); }
+  if(!sample) return null;
+  try{
+    const r = await sample(prompt, {cache:false, modelTier:tier||"quick", onText:({text})=>{ bubble.innerHTML = fmt(text); scrollDown(); }});
+    return r.text;
+  }catch(e){ return null; }
+}
+
+/* ---------- التدفق ---------- */
+async function runUnit(i){
+  setSteps(i);
+  const u = UNITS[i];
+  add("unit", u.title);
+  for(const m of u.msgs){ await wait(350); add("bot", m); }
+  await wait(350);
+  add("bot q", "**سؤال فهم:** " + u.q);
+  mode = "answer";
+  pendingAnswer = async (ans)=>{
+    const b = add("bot", "…");
+    const prompt = RULES + "\n\nالمهمة: قيّم إجابة طبيب على سؤال فهم في 2 إلى 3 جمل. ابدأ بما أصاب فيه، ثم صحّح أو أكمل بلطف. لا تكرر السؤال.\n\nالسؤال: " + u.q + "\nالإجابة النموذجية: " + u.model + "\nإجابة الطبيب: " + ans;
+    const t = await callClaude(prompt, b, "quick");
+    if(t===null) b.innerHTML = fmt("**الإجابة النموذجية:** " + u.model);
+    unitsDone = i+1;
+    nextButton(i < UNITS.length-1 ? "الوحدة التالية" : "ابدأ السيناريوهات", ()=> i < UNITS.length-1 ? runUnit(i+1) : runCases());
+  };
+  askInput("اكتب إجابتك هنا");
+}
+
+async function runCases(){
+  setSteps(5);
+  add("unit", "الوحدة ٦: سيناريوهات سريرية");
+  casesShown = showSix ? CASES : CASES.slice(0,3);
+  add("bot", "بنمر على " + casesShown.length + " سيناريوهات. اختر الخيار الأنسب في كل واحد.");
+  for(let k=0;k<casesShown.length;k++){ await runCase(casesShown[k], k); }
+  unitsDone = 6;
+  setSteps(6);
+  await wait(300);
+  add("bot", SUMMARY);
+  await wait(300);
+  if(!sampleTried) await wait(1500);
+  if(sample){
+    add("bot", "الحين تقدر تسأل أي سؤال عن الموضوع، أو تنهي الجلسة.");
+    mode = "qa";
+    askInput("اكتب سؤالك");
+  }
+  const wrap = document.createElement("div"); wrap.className="opts";
+  const b = document.createElement("button"); b.textContent="إنهاء الجلسة"; b.id="endBtn";
+  b.onclick = ()=>{ wrap.remove(); endSession(); };
+  wrap.appendChild(b); chat.appendChild(wrap); scrollDown();
+}
+
+function runCase(c, k){
+  return new Promise(async resolve=>{
+    await wait(350);
+    add("bot q", "**" + c.id + ": " + c.title + "**\n\n" + c.text + "\n\n**" + c.q + "**");
+    const wrap = document.createElement("div"); wrap.className="opts";
+    c.opts.forEach((o,idx)=>{
+      const b = document.createElement("button"); b.textContent = LETTERS[idx] + ") " + o;
+      b.onclick = async ()=>{
+        [...wrap.children].forEach(x=>x.disabled=true);
+        wrap.remove();
+        msgCount++;
+        add("me", LETTERS[idx] + ") " + o);
+        const right = idx===c.ans; if(right) score++;
+        await wait(300);
+        add("bot " + (right?"ok":"bad"), (right ? "**إجابة صحيحة.** " : "**الأنسب هو " + LETTERS[c.ans] + ".** ") + c.exp);
+        resolve();
+      };
+      wrap.appendChild(b);
+    });
+    chat.appendChild(wrap); scrollDown();
+  });
+}
+
+async function qaAsk(q){
+  const b = add("bot", "…");
+  qaHistory.push({role:"user", content:q});
+  const msgs = [{role:"user", content: RULES + "\n\nالمحتوى المعتمد:\n" + contentDump() + "\n\nأجب عن أسئلة المشارك التالية من هذا المحتوى فقط، في 2 إلى 5 جمل."},{role:"assistant", content:"تمام، جاهز."}].concat(qaHistory);
+  if(!sampleTried) await wait(1500);
+  if(!sample){ b.innerHTML = fmt("الأسئلة المفتوحة تحتاج اتصال Claude، وهو غير متاح في هذا العرض. افتح الصفحة من claude.ai للتجربة الكاملة."); return; }
+  try{
+    const r = await sample(msgs, {cache:false, modelTier:"default", onText:({text})=>{ b.innerHTML = fmt(text); scrollDown(); }});
+    qaHistory.push({role:"assistant", content:r.text});
+  }catch(e){
+    b.innerHTML = fmt(e && e.code==="rate_limited" ? "طلبات كثيرة، انتظر شوي وحاول مرة ثانية." : "ما قدرت أجيب الحين. حاول مرة ثانية.");
+    qaHistory.pop();
+  }
+}
+
+function endSession(){
+  mode = "idle"; hideInput(); clearInterval(timerId);
+  const secs = Math.floor((Date.now()-t0)/1000);
+  add("unit", "انتهت الجلسة");
+  const d = add("bot", "", "<b>انتهت الجلسة، شكراً لك.</b> في الدراسة الفعلية، هنا ينتقل المشارك للاستبيان البعدي (post survey).<div class='stats'>" +
+    "<div>المدة<b>" + Math.floor(secs/60) + ":" + String(secs%60).padStart(2,"0") + "</b></div>" +
+    "<div>الوحدات المكتملة<b>" + unitsDone + " / 6</b></div>" +
+    "<div>السيناريوهات الصحيحة<b>" + score + " / " + casesShown.length + "</b></div>" +
+    "<div>عدد الرسائل<b>" + msgCount + "</b></div></div>");
+  const wrap = document.createElement("div"); wrap.className="opts";
+  const b = document.createElement("button"); b.className="primary"; b.textContent="ابدأ من جديد";
+  b.onclick = ()=> location.reload();
+  wrap.appendChild(b); chat.appendChild(wrap); scrollDown();
+}
+
+function send(){
+  const v = input.value.trim(); if(!v) return;
+  input.value = ""; msgCount++;
+  add("me", v);
+  if(mode==="answer" && pendingAnswer){ const f = pendingAnswer; pendingAnswer = null; mode="idle"; hideInput(); f(v); }
+  else if(mode==="qa"){ qaAsk(v); }
+}
+sendBtn.onclick = send;
+input.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
+input.addEventListener("input", ()=>{ input.style.height="auto"; input.style.height = Math.min(input.scrollHeight,140)+"px"; });
+
+setSteps(-1);
+let showSix = false;
+document.getElementById("start").onclick = async ()=>{
+  showSix = document.getElementById("n6").checked;
+  document.getElementById("intro").remove();
+  t0 = Date.now(); timerId = setInterval(tick, 1000);
+  add("bot", "أهلاً بك. هذه جلسة قصيرة عن **طب الأسنان الدفاعي**: متى يكون قرارك لحماية نفسك بدل مصلحة المريض، وكيف تحمي نفسك بالطريقة الصحيحة.\n\nبنمر على ست وحدات، وبعد كل وحدة سؤال قصير. ما فيه إجابات تُحسب عليك.");
+  await wait(500);
+  runUnit(0);
+};
+</script>
+</body>
+</html>
