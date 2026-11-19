@@ -113,6 +113,10 @@ a.primary{display:block;text-decoration:none;border-radius:10px;padding:10px 14p
 <script>
 /* ================= الإعدادات: عدّلها قبل النشر ================= */
 const CONFIG = {
+  // "pilot" أو "study": يُسجَّل مع كل جلسة في الشيت
+  PHASE: "study",
+  // مكان ملف المحتوى
+  CONTENT_URL: "content.json",
   // رابط Google Apps Script (Deploy > Web app). اتركه فاضي = بدون تسجيل
   SHEET_URL: "",
   // رابط Cloudflare Worker للذكاء الاصطناعي. اتركه فاضي = تظهر الإجابات النموذجية بدل تعليق الذكاء الاصطناعي
@@ -156,7 +160,7 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 /* ---------- التسجيل في Google Sheets ---------- */
 function payload(event){
   return {
-    event, session_id:S.session, code:S.code,
+    event, phase:CONFIG.PHASE, session_id:S.session, code:S.code,
     started_at:new Date(S.t0).toISOString(),
     duration_s:Math.floor((Date.now()-S.t0)/1000),
     units_done:S.unitsDone, cases_n:S.casesN, cases_correct:S.score,
@@ -291,7 +295,7 @@ input.addEventListener("input", ()=>{ input.style.height="auto"; input.style.hei
 setSteps(-1);
 const urlCode = new URLSearchParams(location.search).get("code");
 if(urlCode){ codeIn.value = urlCode.slice(0,20); }
-fetch("content.json",{cache:"no-store"}).then(r=>r.json()).then(j=>{
+fetch(CONFIG.CONTENT_URL,{cache:"no-store"}).then(r=>r.json()).then(j=>{
   C = j; startBtn.disabled = false; startBtn.textContent = "ابدأ الجلسة";
 }).catch(()=>{
   errEl.textContent = "تعذّر تحميل المحتوى. حدّث الصفحة وحاول مرة ثانية."; errEl.classList.remove("hidden");

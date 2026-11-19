@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>جلسة طب الأسنان الدفاعي (Pilot)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one-column chat column, sticky header with unit progress, sticky composer at bottom */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#1b2422; --muted:#5f6b68; --line:#dfe5e3;
+  --accent:#17695f; --accent-soft:#e2f0ed; --user:#17695f; --user-ink:#ffffff;
+  --ok:#2f7d3b; --ok-soft:#e6f3e7; --bad:#a3452f; --bad-soft:#f8e9e5;
+  --display:"Noto Kufi Arabic","IBM Plex Sans Arabic",system-ui,sans-serif;
+  --body:"IBM Plex Sans Arabic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121816; --surface:#1b2321; --ink:#e7eeeb; --muted:#9aa8a4; --line:#2b3633;
+    --accent:#5cc2b2; --accent-soft:#1d3531; --user:#2f8f82; --user-ink:#ffffff;
+    --ok:#7ccc87; --ok-soft:#1f3322; --bad:#ef9a85; --bad-soft:#3a2420; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121816; --surface:#1b2321; --ink:#e7eeeb; --muted:#9aa8a4; --line:#2b3633;
+  --accent:#5cc2b2; --accent-soft:#1d3531; --user:#2f8f82; --user-ink:#ffffff;
+  --ok:#7ccc87; --ok-soft:#1f3322; --bad:#ef9a85; --bad-soft:#3a2420; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.75;font-size:16px;display:flex;flex-direction:column}
+header{position:sticky;top:0;z-index:2;background:var(--surface);border-bottom:1px solid var(--line);padding:10px 16px}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:720px;margin:0 auto}
+header h1{font-family:var(--display);font-size:1rem;margin:0;text-wrap:balance}
+.steps{display:flex;gap:4px;max-width:720px;margin:8px auto 0}
+.steps span{flex:1;height:5px;border-radius:3px;background:var(--line)}
+.steps span.done{background:var(--accent)}
+.steps span.now{background:var(--accent);opacity:.45}
+.timer{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+main{flex:1;overflow-y:auto;padding:16px}
+.chat{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:10px;padding-bottom:12px}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word}
+.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-start-start-radius:4px}
+.me{align-self:flex-end;background:var(--user);color:var(--user-ink);border-start-end-radius:4px}
+.unit{align-self:stretch;max-width:none;text-align:center;font-family:var(--display);font-size:.85rem;color:var(--accent);background:transparent;padding:6px 0 0}
+.q{border-inline-start:4px solid var(--accent)}
+.ok{background:var(--ok-soft);border-color:transparent}
+.bad{background:var(--bad-soft);border-color:transparent}
+.note{align-self:center;font-size:.8rem;color:var(--muted);background:transparent;padding:0}
+.opts{display:flex;flex-direction:column;gap:8px;align-self:stretch}
+button{font:inherit;cursor:pointer;border-radius:10px;padding:10px 14px;border:1px solid var(--accent);background:var(--surface);color:var(--accent);text-align:start}
+button.primary{background:var(--accent);color:var(--surface);border-color:var(--accent);text-align:center;font-weight:600}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.composer{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px}
+.crow{max-width:720px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+textarea{flex:1;font:inherit;resize:none;min-height:44px;max-height:140px;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg);color:var(--ink)}
+.crow button{flex-shrink:0}
+.hidden{display:none !important}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+.stats div{background:var(--accent-soft);border-radius:10px;padding:8px 10px;font-size:.85rem}
+.stats b{display:block;font-size:1.2rem;font-variant-numeric:tabular-nums}
+.intro{max-width:720px;margin:0 auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.intro h2{font-family:var(--display);font-size:1.25rem;margin:0 0 6px;text-wrap:balance}
+.intro p{margin:6px 0;color:var(--muted)}
+.intro ol{margin:8px 0;padding-inline-start:22px}
+.intro label{display:block;margin:12px 0 6px;font-size:.9rem;font-weight:500}
+.intro input{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);margin-bottom:12px;direction:ltr;text-align:center;letter-spacing:.1em}
+.err{color:var(--bad)!important}
+a.primary{display:block;text-decoration:none;border-radius:10px;padding:10px 14px;background:var(--accent);color:var(--surface);text-align:center;font-weight:600}
+@media (prefers-reduced-motion: no-preference){ .msg{animation:in .2s ease-out} @keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}} }
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <h1>جلسة توعية: طب الأسنان الدفاعي</h1>
+    <span class="timer" id="timer">00:00</span>
+  </div>
+  <div class="steps" id="steps"></div>
+</header>
+<main id="scroller">
+  <section class="intro" id="intro">
+    <h2>جلسة توعية قصيرة (نسخة تجريبية)</h2>
+    <p>شكراً لمشاركتك. الجلسة ست وحدات، تقريباً 18 دقيقة. حاول تكملها في جلسة واحدة.</p>
+    <ol>
+      <li>المفهوم والأنواع والأسباب</li>
+      <li>المسؤولية المهنية والقانونية</li>
+      <li>المضاعفات مقابل الأخطاء</li>
+      <li>الحماية المشروعة والتعامل مع الشكاوى</li>
+      <li>اتخاذ القرار المبني على الأدلة</li>
+      <li>سيناريوهات سريرية</li>
+    </ol>
+    <p>بعد كل وحدة سؤال فهم قصير، وما فيه إجابات تُحسب عليك.</p>
+    <div id="codeBox">
+      <label for="code">رمز المشارك (نفس الرمز اللي كتبته في الاستبيان الأول)</label>
+      <input id="code" autocomplete="off" inputmode="text" maxlength="20">
+    </div>
+    <p class="err hidden" id="err"></p>
+    <p><b>تنبيه:</b> هذا المحتوى تعليمي عام لأغراض البحث والتدريب، ولا يُعتبر استشارة قانونية أو طبية لحالة معينة. الأنظمة المذكورة هي أمثلة من المملكة العربية السعودية، وقد تختلف في دول أخرى. عند مواجهة حالة حقيقية يجب الرجوع للجهة المنظمة للمهنة والمشرف المختص.</p>
+    <button class="primary" id="start" disabled>جاري التحميل…</button>
+  </section>
+  <div class="chat" id="chat"></div>
+</main>
+<div class="composer hidden" id="composer">
+  <div class="crow">
+    <textarea id="input" rows="1" placeholder="اكتب إجابتك هنا"></textarea>
+    <button class="primary" id="send">إرسال</button>
+  </div>
+</div>
+
+<script>
+/* ================= الإعدادات: عدّلها قبل النشر ================= */
+const CONFIG = {
+  // "pilot" أو "study": يُسجَّل مع كل جلسة في الشيت
+  PHASE: "pilot",
+  // مكان ملف المحتوى
+  CONTENT_URL: "../content.json",
+  // رابط Google Apps Script (Deploy > Web app). اتركه فاضي = بدون تسجيل
+  SHEET_URL: "",
+  // رابط Cloudflare Worker للذكاء الاصطناعي. اتركه فاضي = تظهر الإجابات النموذجية بدل تعليق الذكاء الاصطناعي
+  AI_URL: "",
+  // رابط الاستبيان البعدي. {code} يُستبدل برمز المشارك (رابط Google Form مع prefill)
+  POST_SURVEY_URL: "",
+  // عدد السيناريوهات: 3 أو 6
+  CASES_N: 3,
+  // تسجيل نصوص إجابات المشاركين في الشيت (يحتاج موافقة اللجنة الأخلاقية)
+  LOG_TEXT: false
+};
+/* =============================================================== */
+
+let C = null; // content.json
+const LETTERS = ["أ","ب","ج"];
+const chat = document.getElementById("chat");
+const scroller = document.getElementById("scroller");
+const composer = document.getElementById("composer");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("send");
+const stepsEl = document.getElementById("steps");
+const startBtn = document.getElementById("start");
+const codeIn = document.getElementById("code");
+const errEl = document.getElementById("err");
+
+const S = { session:"", code:"", t0:0, unitsDone:0, casesN:0, score:0, msgs:0, answers:[], comp:[], qa:[], ai:false, ended:false };
+let timerId = 0, mode = "idle", pendingAnswer = null, qaHistory = [];
+
+function esc(s){ return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function fmt(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>"); }
+function scrollDown(){ requestAnimationFrame(()=>{ scroller.scrollTop = scroller.scrollHeight; }); }
+function add(cls, text, html){ const d=document.createElement("div"); d.className="msg "+cls; d.innerHTML = html!==undefined ? html : fmt(text); chat.appendChild(d); scrollDown(); return d; }
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+function setSteps(cur){ stepsEl.innerHTML=""; for(let i=0;i<7;i++){ const s=document.createElement("span"); if(i<cur) s.className="done"; else if(i===cur) s.className="now"; stepsEl.appendChild(s);} }
+function tick(){ const s=Math.floor((Date.now()-S.t0)/1000); document.getElementById("timer").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0"); }
+function askInput(ph){ composer.classList.remove("hidden"); input.placeholder=ph; input.value=""; input.focus({preventScroll:true}); }
+function hideInput(){ composer.classList.add("hidden"); }
+function button(label, fn, primary){ const wrap=document.createElement("div"); wrap.className="opts"; const b=document.createElement("button"); if(primary!==false) b.className="primary"; b.textContent=label; b.onclick=()=>{ wrap.remove(); fn(); }; wrap.appendChild(b); chat.appendChild(wrap); scrollDown(); return wrap; }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+/* ---------- التسجيل في Google Sheets ---------- */
+function payload(event){
+  return {
+    event, phase:CONFIG.PHASE, session_id:S.session, code:S.code,
+    started_at:new Date(S.t0).toISOString(),
+    duration_s:Math.floor((Date.now()-S.t0)/1000),
+    units_done:S.unitsDone, cases_n:S.casesN, cases_correct:S.score,
+    case_answers:S.answers.join(" "), messages:S.msgs, qa_questions:S.qa.length,
+    ai_available:S.ai,
+    comprehension_text: CONFIG.LOG_TEXT ? JSON.stringify(S.comp) : "",
+    qa_text: CONFIG.LOG_TEXT ? JSON.stringify(S.qa) : ""
+  };
+}
+function log(event, beacon){
+  if(!CONFIG.SHEET_URL) return;
+  const body = JSON.stringify(payload(event));
+  try{
+    if(beacon && navigator.sendBeacon){ navigator.sendBeacon(CONFIG.SHEET_URL, new Blob([body],{type:"text/plain"})); return; }
+    fetch(CONFIG.SHEET_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body,keepalive:true}).catch(()=>{});
+  }catch(e){}
+}
+window.addEventListener("pagehide", ()=>{ if(S.t0 && !S.ended) log("left", true); });
+
+/* ---------- الذكاء الاصطناعي عبر الـ Worker ---------- */
+async function ai(body){
+  if(!CONFIG.AI_URL) return null;
+  try{
+    const ctl = new AbortController(); const to = setTimeout(()=>ctl.abort(), 30000);
+    const r = await fetch(CONFIG.AI_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:ctl.signal});
+    clearTimeout(to);
+    if(!r.ok) return null;
+    const j = await r.json(); S.ai = true; return j.text || null;
+  }catch(e){ return null; }
+}
+
+/* ---------- التدفق ---------- */
+async function runUnit(i){
+  setSteps(i);
+  const u = C.units[i];
+  add("unit", u.title);
+  for(const m of u.msgs){ await wait(350); add("bot", m); }
+  await wait(350);
+  add("bot q", "**سؤال فهم:** " + u.q);
+  mode = "answer";
+  pendingAnswer = async (ans)=>{
+    S.comp.push({unit:i+1, answer:ans});
+    const b = add("bot", "…");
+    const t = await ai({type:"feedback", unit:i, answer:ans});
+    b.innerHTML = fmt(t || ("**الإجابة النموذجية:** " + u.model));
+    scrollDown();
+    S.unitsDone = i+1;
+    button(i < C.units.length-1 ? "الوحدة التالية" : "ابدأ السيناريوهات", ()=> i < C.units.length-1 ? runUnit(i+1) : runCases());
+  };
+  askInput("اكتب إجابتك هنا");
+}
+
+async function runCases(){
+  setSteps(5);
+  add("unit", "الوحدة ٦: سيناريوهات سريرية");
+  const list = CONFIG.CASES_N >= 6 ? C.cases : C.cases.slice(0,3);
+  S.casesN = list.length;
+  add("bot", "بنمر على " + list.length + " سيناريوهات. اختر الخيار الأنسب في كل واحد.");
+  for(const c of list){ await runCase(c); }
+  S.unitsDone = 6; setSteps(6);
+  await wait(300); add("bot", C.summary);
+  await wait(300);
+  if(CONFIG.AI_URL){
+    add("bot", "الحين تقدر تسأل أي سؤال عن الموضوع، أو تنهي الجلسة.");
+    mode = "qa"; askInput("اكتب سؤالك");
+  }
+  const w = button("إنهاء الجلسة", ()=>{ endSession(); });
+  w.id = "endWrap";
+}
+
+function runCase(c){
+  return new Promise(async resolve=>{
+    await wait(350);
+    add("bot q", "**" + c.id + ": " + c.title + "**\n\n" + c.text + "\n\n**" + c.q + "**");
+    const wrap=document.createElement("div"); wrap.className="opts";
+    c.opts.forEach((o,idx)=>{
+      const b=document.createElement("button"); b.textContent=LETTERS[idx]+") "+o;
+      b.onclick=async ()=>{
+        wrap.remove(); S.msgs++;
+        add("me", LETTERS[idx]+") "+o);
+        const right = idx===c.ans; if(right) S.score++;
+        S.answers.push(c.id+":"+LETTERS[idx]+(right?"✓":"✗"));
+        await wait(300);
+        add("bot "+(right?"ok":"bad"), (right?"**إجابة صحيحة.** ":"**الأنسب هو "+LETTERS[c.ans]+".** ")+c.exp);
+        resolve();
+      };
+      wrap.appendChild(b);
+    });
+    chat.appendChild(wrap); scrollDown();
+  });
+}
+
+async function qaAsk(q){
+  S.qa.push(q);
+  const b = add("bot", "…");
+  qaHistory.push({role:"user", content:q});
+  const t = await ai({type:"qa", history:qaHistory.slice(-10)});
+  if(t){ b.innerHTML = fmt(t); qaHistory.push({role:"assistant", content:t}); }
+  else { b.innerHTML = fmt("ما قدرت أجيب الحين. حاول مرة ثانية، أو أنهِ الجلسة."); qaHistory.pop(); }
+  scrollDown();
+  // أبقِ زر الإنهاء تحت آخر رسالة
+  const w = document.getElementById("endWrap"); if(w){ chat.appendChild(w); scrollDown(); }
+}
+
+function endSession(){
+  S.ended = true; mode="idle"; hideInput(); clearInterval(timerId); setSteps(7);
+  log("completed");
+  add("unit", "انتهت الجلسة");
+  let html = "<b>شكراً لك، انتهت الجلسة.</b><br>الخطوة الأخيرة: عبّ الاستبيان الثاني. رمزك هو <b dir='ltr'>" + esc(S.code) + "</b>.";
+  add("bot", "", html);
+  if(CONFIG.POST_SURVEY_URL){
+    const url = CONFIG.POST_SURVEY_URL.replace("{code}", encodeURIComponent(S.code));
+    const wrap=document.createElement("div"); wrap.className="opts";
+    const a=document.createElement("a"); a.className="primary"; a.href=url; a.textContent="افتح الاستبيان الثاني"; a.rel="noopener";
+    wrap.appendChild(a); chat.appendChild(wrap); scrollDown();
+  }
+}
+
+function send(){
+  const v = input.value.trim(); if(!v) return;
+  if(v.length > 1000){ input.value = v.slice(0,1000); return; }
+  input.value=""; S.msgs++;
+  add("me", v);
+  if(mode==="answer" && pendingAnswer){ const f=pendingAnswer; pendingAnswer=null; mode="idle"; hideInput(); f(v); }
+  else if(mode==="qa"){ qaAsk(v); }
+}
+sendBtn.onclick = send;
+input.addEventListener("keydown", e=>{ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); } });
+input.addEventListener("input", ()=>{ input.style.height="auto"; input.style.height=Math.min(input.scrollHeight,140)+"px"; });
+
+/* ---------- البداية ---------- */
+setSteps(-1);
+const urlCode = new URLSearchParams(location.search).get("code");
+if(urlCode){ codeIn.value = urlCode.slice(0,20); }
+fetch(CONFIG.CONTENT_URL,{cache:"no-store"}).then(r=>r.json()).then(j=>{
+  C = j; startBtn.disabled = false; startBtn.textContent = "ابدأ الجلسة";
+}).catch(()=>{
+  errEl.textContent = "تعذّر تحميل المحتوى. حدّث الصفحة وحاول مرة ثانية."; errEl.classList.remove("hidden");
+});
+startBtn.onclick = async ()=>{
+  const code = codeIn.value.trim();
+  if(!code){ errEl.textContent = "اكتب رمز المشارك أولاً."; errEl.classList.remove("hidden"); codeIn.focus(); return; }
+  S.code = code; S.session = uid(); S.t0 = Date.now();
+  document.getElementById("intro").remove();
+  timerId = setInterval(tick, 1000);
+  log("started");
+  add("bot", "أهلاً بك. هذه جلسة قصيرة عن **طب الأسنان الدفاعي**: متى يكون قرارك لحماية نفسك بدل مصلحة المريض، وكيف تحمي نفسك بالطريقة الصحيحة.\n\nبنمر على ست وحدات، وبعد كل وحدة سؤال قصير. ما فيه إجابات تُحسب عليك.");
+  await wait(500);
+  runUnit(0);
+};
+</script>
+</body>
+</html>
